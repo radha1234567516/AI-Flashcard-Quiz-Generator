@@ -1,126 +1,164 @@
 
-import os
-import json
 import streamlit as st
+import random
+import os
 from dotenv import load_dotenv
-from google import genai
 
 load_dotenv()
-
 st.set_page_config(
     page_title="AI Flashcard & Quiz Generator",
-    page_icon="📚"
+    page_icon="📚",
+    layout="wide"
 )
+
+# Password protection
+APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
+
+if not APP_PASSWORD:
+    st.error("Website password is not configured.")
+    st.stop()
+
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.title("🔐 AI Flashcard & Quiz Generator")
+    password = st.text_input("Enter password", type="password")
+
+    if st.button("Login"):
+        if password == APP_PASSWORD:
+            st.session_state.authenticated = True
+            st.rerun()
+        else:
+            st.error("Incorrect password. Try again.")
+
+    st.stop()
+
 
 st.title("📚 AI Flashcard & Quiz Generator")
-st.write("Create flashcards and quizzes from your study notes using AI.")
+st.write("Learn smarter with flashcards and practice quizzes!")
 
-notes = st.text_area(
-    "Paste your study notes here",
-    height=220,
-    placeholder="Paste your study notes here..."
+st.sidebar.title("📖 Navigation")
+page = st.sidebar.radio(
+    "Choose a feature",
+    ["Home", "Flashcards", "Practice Quiz"]
 )
 
-if st.button("✨ Generate with AI"):
-    if not notes.strip():
-        st.warning("Please paste your study notes first.")
+if page == "Home":
+    st.header("Welcome to your Study Assistant! 🎓")
+    st.write(
+        "This application helps students revise topics "
+        "using flashcards and multiple-choice quizzes."
+    )
+    st.info("Choose Flashcards or Practice Quiz from the sidebar.")
 
-    elif not os.getenv("GEMINI_API_KEY"):
-        st.error("API key not found. Check your .env file.")
+elif page == "Flashcards":
+    st.header("🗂️ Flashcard Generator")
+    st.write("Enter your study notes to create flashcards.")
 
-    else:
-        try:
-            with st.spinner("AI is preparing your study material..."):
-                client = genai.Client(
-                    api_key=os.getenv("GEMINI_API_KEY")
-                )
+    notes = st.text_area(
+        "Enter notes (one question and answer per line):",
+        placeholder="What is Python? | Python is a programming language.\nWhat is AI? | AI means Artificial Intelligence."
+    )
 
-                prompt = f"""
-Create 5 flashcards and 5 multiple-choice quiz questions
-from the following study notes.
+    if st.button("Create Flashcards"):
+        cards = []
 
-Return ONLY valid JSON in this format:
-{{
-  "flashcards": [
-    {{"question": "Question", "answer": "Answer"}}
-  ],
-  "quiz": [
-    {{
-      "question": "Question",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "answer": "Correct option text",
-      "explanation": "Short explanation"
-    }}
-  ]
-}}
+        for line in notes.splitlines():
+            if "|" in line:
+                question, answer = line.split("|", 1)
+                if question.strip() and answer.strip():
+                    cards.append((question.strip(), answer.strip()))
 
-Study notes:
-{notes[:12000]}
-"""
+        if cards:
+            st.session_state.cards = cards
+            st.session_state.card_index = 0
+        else:
+            st.warning("Enter notes using Question | Answer format.")
 
-                response = client.models.generate_content(
-                   model="gemini-omni-1.1-flash",
-                    contents=prompt
-                )
+    if st.session_state.get("cards"):
+        cards = st.session_state.cards
+        index = st.session_state.card_index
 
-                result_text = response.text.strip()
-                result_text = result_text.replace(
-                    "```json", ""
-                ).replace("```", "").strip()
+        st.subheader(f"Flashcard {index + 1} of {len(cards)}")
+        st.markdown(f"**Question:** {cards[index][0]}")
 
-                data = json.loads(result_text)
+        if st.button("Show Answer"):
+            st.session_state.show_answer = True
 
-            st.session_state["ai_material"] = data
-            st.success("Study material generated successfully!")
+        if st.session_state.get("show_answer", False):
+            st.success(cards[index][1])
 
-        except Exception as e:
-            st.error("AI generation failed.")
-            st.write("Error details:", str(e))
+        col1, col2 = st.columns(2)
 
-if "ai_material" in st.session_state:
-    data = st.session_state["ai_material"]
+        with col1:
+            if st.button("⬅ Previous") and index > 0:
+                st.session_state.card_index -= 1
+                st.session_state.show_answer = False
+                st.rerun()
 
-    st.header("📚 Flashcards")
+        with col2:
+            if st.button("Next ➡") and index < len(cards) - 1:
+                st.session_state.card_index += 1
+                st.session_state.show_answer = False
+                st.rerun()
 
-    for i, card in enumerate(
-        data.get("flashcards", []), start=1
-    ):
-        with st.expander(
-            f"Flashcard {i}: {card.get('question', '')}"
-        ):
-            st.write(card.get("answer", ""))
-
+elif page == "Practice Quiz":
     st.header("📝 Practice Quiz")
+    st.write("Create a simple multiple-choice quiz.")
 
-    quiz = data.get("quiz", [])
+    with st.form("quiz_form"):
+        question = st.text_input("Enter your question")
+        option_a = st.text_input("Option A")
+        option_b = st.text_input("Option B")
+        option_c = st.text_input("Option C")
+        option_d = st.text_input("Option D")
+        correct = st.selectbox(
+            "Choose the correct option",
+            ["A", "B", "C", "D"]
+        )
+        submitted = st.form_submit_button("Create Quiz")
+
+    if submitted:
+        if all([question.strip(), option_a.strip(),
+                option_b.strip(), option_c.strip(), option_d.strip()]):
+            st.session_state.quiz = {
+                "question": question,
+                "options": {
+                    "A": option_a,
+                    "B": option_b,
+                    "C": option_c,
+                    "D": option_d
+                },
+                "correct": correct
+            }
+            st.session_state.pop("quiz_answer", None)
+        else:
+            st.warning("Please fill in all fields.")
+
+    quiz = st.session_state.get("quiz")
 
     if quiz:
-        with st.form("quiz_form"):
-            answers = {}
+        st.subheader(quiz["question"])
+        answer = st.radio(
+            "Select your answer",
+            list(quiz["options"].keys()),
+            format_func=lambda key: f"{key}. {quiz['options'][key]}",
+            key="quiz_choice"
+        )
 
-            for i, question in enumerate(quiz):
-                answers[i] = st.radio(
-                    f"{i + 1}. {question.get('question', '')}",
-                    question.get("options", []),
-                    key=f"quiz_{i}"
+        if st.button("Submit Answer"):
+            st.session_state.quiz_answer = answer
+
+        if "quiz_answer" in st.session_state:
+            if st.session_state.quiz_answer == quiz["correct"]:
+                st.success("Correct answer! 🎉")
+            else:
+                st.error(
+                    f"Not quite. Correct answer: "
+                    f"{quiz['correct']}. "
+                    f"{quiz['options'][quiz['correct']]}"
                 )
 
-            submitted = st.form_submit_button("Check Answers")
-
-        if submitted:
-            score = 0
-
-            for i, question in enumerate(quiz):
-                correct = question.get("answer", "")
-
-                if answers[i] == correct:
-                    score += 1
-                    st.success(f"Question {i + 1}: Correct!")
-                else:
-                    st.error(
-                        f"Question {i + 1}: Correct answer: {correct}"
-                    )
-
-                st.info(question.get("explanation", ""))
-
-            st.subheader(f"Your Score: {score}/{len(quiz)}")
+st.divider()
+st.caption("Mini Project | AI Flashcard & Quiz Generator")
