@@ -15,6 +15,11 @@ st.set_page_config(
 APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
 
 if not APP_PASSWORD:
+    try:
+        APP_PASSWORD = st.secrets["APP_PASSWORD"]
+    except Exception:
+        APP_PASSWORD = ""
+if not APP_PASSWORD:
     st.error("Website password is not configured.")
     st.stop()
 
