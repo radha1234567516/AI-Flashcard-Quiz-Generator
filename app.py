@@ -11,35 +11,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# Password protection
-APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
-
-if not APP_PASSWORD:
-    try:
-        APP_PASSWORD = st.secrets["APP_PASSWORD"]
-    except Exception:
-        APP_PASSWORD = ""
-if not APP_PASSWORD:
-    st.error("Website password is not configured.")
-    st.stop()
-
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-
-if not st.session_state.authenticated:
-    st.title("🔐 AI Flashcard & Quiz Generator")
-    password = st.text_input("Enter password", type="password")
-
-    if st.button("Login"):
-        if password == APP_PASSWORD:
-            st.session_state.authenticated = True
-            st.rerun()
-        else:
-            st.error("Incorrect password. Try again.")
-
-    st.stop()
-
-
 st.title("📚 AI Flashcard & Quiz Generator")
 st.write("Learn smarter with flashcards and practice quizzes!")
 
