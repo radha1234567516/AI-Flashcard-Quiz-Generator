@@ -38,32 +38,41 @@ if "quiz" not in st.session_state:
 if "quiz_answers" not in st.session_state:
     st.session_state.quiz_answers = None
 
-
 def generate_ai(prompt):
     if not API_KEY:
-        st.error(
-            "Gemini API key is missing. "
-            "Add GEMINI_API_KEY in Streamlit Secrets."
-        )
+        st.error("Gemini API key is missing. Check Streamlit Secrets.")
         return None
+
+    import time
 
     try:
         client = genai.Client(api_key=API_KEY)
-        response = client.models.generate_content(
-        model="gemini-3.6-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.3
-            )
-        )
-        return json.loads(response.text)
+
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model="gemini-3.6-flash",
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        temperature=0.3
+                    )
+                )
+                return json.loads(response.text)
+
+            except Exception as e:
+                error_text = str(e)
+
+                if "503" in error_text and attempt < 2:
+                    time.sleep(3 * (attempt + 1))
+                    continue
+
+                st.error("AI generation failed. Please try again later.")
+                st.caption(error_text)
+                return None
 
     except Exception as e:
-        st.error(
-            "AI generation failed. Check your API key, "
-            "model availability, quota, and internet connection."
-        )
+        st.error("Could not connect to Gemini AI.")
         st.caption(str(e))
         return None
 
