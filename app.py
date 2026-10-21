@@ -92,6 +92,55 @@ if page == "Home":
     st.info("Start with PDF & AI Generator in the sidebar.")
 
 elif page == "PDF & AI Generator":
+    
+    if st.button("🎓 Load Demo Data (Works Without AI)"):
+        st.session_state.study_text = "Python is a high-level programming language. AI means Artificial Intelligence. Machine Learning is a branch of AI that learns patterns from data."
+        
+        st.session_state.flashcards = [
+            {
+                "question": "What is Python?",
+                "answer": "Python is a high-level programming language."
+            },
+            {
+                "question": "What is AI?",
+                "answer": "AI stands for Artificial Intelligence."
+            },
+            {
+                "question": "What is Machine Learning?",
+                "answer": "Machine Learning is a branch of AI that learns patterns from data."
+            }
+        ]
+        
+        st.session_state.card_index = 0
+        
+        st.session_state.quiz = [
+            {
+                "question": "What does AI stand for?",
+                "options": {
+                    "A": "Automatic Internet",
+                    "B": "Artificial Intelligence",
+                    "C": "Advanced Information",
+                    "D": "Applied Integration"
+                },
+                "correct_answer": "B",
+                "explanation": "AI stands for Artificial Intelligence."
+            },
+            {
+                "question": "Which is a programming language?",
+                "options": {
+                    "A": "Python",
+                    "B": "Google",
+                    "C": "Windows",
+                    "D": "Internet"
+                },
+                "correct_answer": "A",
+                "explanation": "Python is a programming language."
+            }
+        ]
+        
+        st.session_state.quiz_answers = {}
+        st.success("Demo data loaded! Open Flashcards or Practice Quiz.")
+
     st.header("📄 Upload Notes")
     pdf_file = st.file_uploader(
         "Upload your study PDF",
